@@ -12,6 +12,11 @@ description = "GLFW bindings for Mojo"
 [package.build]
 backend = { name = "pixi-build-mojo", version = "*" }
 
+[package.build.config]
+[package.build.config.pkg]
+name = "glfw"
+path = "glfw"
+
 [package.build-dependencies]
 mojo = ">=0.25.7.0.dev2025110505,<0.26"
 glfw = ">=3.4,<4"
@@ -22,5 +27,4 @@ max = ">=25.7.0.dev2025110505,<26"
 glfw = ">=3.4,<4"
 
 [dependencies]
-# For development - allows you to work on glfw-mojo itself
 glfw-mojo = { path = "." }
