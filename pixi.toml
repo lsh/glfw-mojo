@@ -1,0 +1,11 @@
+[workspace]
+authors = ["Lukas Hermann <1734032+lsh@users.noreply.github.com>"]
+channels = ["https://conda.modular.com/max-nightly", "conda-forge"]
+name = "glfw-mojo"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[dependencies]
+mojo = ">=0.25.7.0.dev2025110505,<0.26"
+max = ">=25.7.0.dev2025110505,<26"
+glfw = ">=3.4,<4"

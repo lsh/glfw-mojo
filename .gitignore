@@ -1,0 +1,14 @@
+
+# pixi environments
+.pixi
+*.egg-info
+
+# KGEN
+kgen.trace.json.time-trace
+kgen.trace.json.time-events.txt
+
+# MacOS
+.DS_Store
+
+# etc
+build/
