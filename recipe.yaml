@@ -1,0 +1,16 @@
+package:
+  name: glfw-mojo
+  version: "0.1.0"
+
+source:
+  path: .
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX/lib/mojo
+    - mojo package glfw -o $PREFIX/lib/mojo/glfw.mojopkg
+
+requirements:
+  build:
+    - mojo-compiler >=0.25.7.0.dev2025110505,<0.26
