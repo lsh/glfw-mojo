@@ -1246,3 +1246,9 @@ fn glfwCreateWindowSurface(
     return external_call["glfwCreateWindowSurface", Int32](
         instance, window, allocator, surface
     )
+
+
+fn glfwGetCocoaWindow(window: UnsafePointer[GLFWwindow]) -> OpaquePointer:
+    return external_call[
+        "glfwGetCocoaWindow", OpaquePointer, UnsafePointer[GLFWwindow]
+    ](window)

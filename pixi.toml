@@ -10,3 +10,7 @@ version = "0.1.0"
 
 [package.build]
 backend = { name = "pixi-build-rattler-build", version = "*" }
+
+[dependencies]
+max = ">=25.7.0.dev2025110705,<26"
+mojo = ">=0.25.7.0.dev2025110705,<0.26"

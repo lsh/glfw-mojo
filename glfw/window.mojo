@@ -410,9 +410,13 @@ struct Window(Movable):
     fn default_hints():
         _ = _cffi.glfwDefaultWindowHints()
 
-    # fn glfwWindowHint(hint: Int32, value: Int32):
-    #     _ = external_call["glfwWindowHint", NoneType](hint, value)
+    @staticmethod
+    fn hint(hint: Attribute, value: Int32):
+        _ = _cffi.glfwWindowHint(hint._value, value)
 
     @staticmethod
     fn hint_string(hint: Attribute, mut value: String):
         _ = _cffi.glfwWindowHintString(hint._value, value.unsafe_cstr_ptr())
+
+    fn get_cocoa_window(self) -> OpaquePointer:
+        return _cffi.glfwGetCocoaWindow(self._ptr)
