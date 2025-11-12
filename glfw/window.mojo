@@ -5,13 +5,13 @@ from .monitor import Monitor
 
 
 struct Window(Movable):
-    var _ptr: UnsafePointer[_cffi.GLFWwindow]
+    var _ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external]
     var _owning: Bool
 
     fn __init__(
         out self,
         *,
-        unsafe_raw_handle: UnsafePointer[_cffi.GLFWwindow],
+        unsafe_raw_handle: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
         owning: Bool,
     ):
         self._ptr = unsafe_raw_handle
@@ -116,7 +116,7 @@ struct Window(Movable):
         Get the window frame size.
 
         Returns:
-            The frame size in order: left, top, right, bottom
+            The frame size in order: left, top, right, bottom.
         """
         var left = Int32()
         var top = Int32()
@@ -195,43 +195,57 @@ struct Window(Movable):
     fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[T]):
         _cffi.glfwSetWindowUserPointer(self._ptr, ptr.bitcast[NoneType]())
 
-    fn get_user_pointer[T: AnyType](self) -> UnsafePointer[T]:
+    fn get_user_pointer[
+        T: AnyType
+    ](self) -> UnsafePointer[T, MutOrigin.external]:
         return _cffi.glfwGetWindowUserPointer(self._ptr).bitcast[T]()
 
     fn set_pos_callback[callback: WindowPosFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], x: Int32, y: Int32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            x: Int32,
+            y: Int32,
+        ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), x, y)
 
         _ = _cffi.glfwSetWindowPosCallback(self._ptr, _callback)
 
     fn set_size_callback[callback: WindowSizeFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow], width: Int32, height: Int32
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            width: Int32,
+            height: Int32,
         ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), width, height)
 
         _ = _cffi.glfwSetWindowSizeCallback(self._ptr, _callback)
 
     fn set_close_callback[callback: WindowCloseFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow]):
+        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external]):
             callback(Window(unsafe_raw_handle=ptr, owning=False))
 
         _ = _cffi.glfwSetWindowCloseCallback(self._ptr, _callback)
 
     fn set_refresh_callback[callback: WindowRefreshFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow]):
+        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external]):
             callback(Window(unsafe_raw_handle=ptr, owning=False))
 
         _ = _cffi.glfwSetWindowRefreshCallback(self._ptr, _callback)
 
     fn set_focus_callback[callback: WindowFocusFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], focused: Int32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            focused: Int32,
+        ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), Bool(focused))
 
         _ = _cffi.glfwSetWindowFocusCallback(self._ptr, _callback)
 
     fn set_iconify_callback[callback: WindowIconifyFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], iconified: Int32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            iconified: Int32,
+        ):
             callback(
                 Window(unsafe_raw_handle=ptr, owning=False), Bool(iconified)
             )
@@ -239,7 +253,10 @@ struct Window(Movable):
         _ = _cffi.glfwSetWindowIconifyCallback(self._ptr, _callback)
 
     fn set_maximize_callback[callback: WindowMaximizeFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], maximized: Int32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            maximized: Int32,
+        ):
             callback(
                 Window(unsafe_raw_handle=ptr, owning=False), Bool(maximized)
             )
@@ -248,7 +265,9 @@ struct Window(Movable):
 
     fn set_framebuffer_size_callback[callback: FramebufferSizeFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow], width: Int32, height: Int32
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            width: Int32,
+            height: Int32,
         ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), width, height)
 
@@ -256,7 +275,7 @@ struct Window(Movable):
 
     fn set_content_scale_callback[callback: WindowContentScaleFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow],
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
             xscale: Float32,
             yscale: Float32,
         ):
@@ -298,7 +317,7 @@ struct Window(Movable):
 
     fn set_key_callback[callback: KeyFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow],
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
             key: Int32,
             scancode: Int32,
             action: Int32,
@@ -315,7 +334,10 @@ struct Window(Movable):
         _ = _cffi.glfwSetKeyCallback(self._ptr, _callback)
 
     fn set_char_callback[callback: CharFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], codepoint: UInt32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            codepoint: UInt32,
+        ):
             callback(
                 Window(unsafe_raw_handle=ptr, owning=False),
                 Codepoint(unsafe_unchecked_codepoint=codepoint),
@@ -325,7 +347,9 @@ struct Window(Movable):
 
     fn set_char_mods_callback[callback: CharModsFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow], codepoint: UInt32, mods: Int32
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            codepoint: UInt32,
+            mods: Int32,
         ):
             callback(
                 Window(unsafe_raw_handle=ptr, owning=False),
@@ -337,7 +361,7 @@ struct Window(Movable):
 
     fn set_mouse_button_callback[callback: MouseButtonFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow],
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
             button: Int32,
             action: Int32,
             mods: Int32,
@@ -353,21 +377,26 @@ struct Window(Movable):
 
     fn set_cursor_pos_callback[callback: CursorPosFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow], xpos: Float64, ypos: Float64
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            xpos: Float64,
+            ypos: Float64,
         ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), xpos, ypos)
 
         _ = _cffi.glfwSetCursorPosCallback(self._ptr, _callback)
 
     fn set_cursor_enter_callback[callback: CursorEnterFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow], entered: Int32):
+        fn _callback(
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            entered: Int32,
+        ):
             callback(Window(unsafe_raw_handle=ptr, owning=False), Bool(entered))
 
         _ = _cffi.glfwSetCursorEnterCallback(self._ptr, _callback)
 
     fn set_scroll_callback[callback: ScrollFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow],
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
             xoffset: Float64,
             yoffset: Float64,
         ):
@@ -379,9 +408,11 @@ struct Window(Movable):
 
     fn set_drop_callback[callback: DropFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow],
+            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
             count: Int32,
-            paths: UnsafePointer[UnsafePointer[Int8]],
+            paths: UnsafePointer[
+                UnsafePointer[Int8, ImmutOrigin.external], ImmutOrigin.external
+            ],
         ):
             var path_list = List[StaticString]()
             for i in range(count):
@@ -418,5 +449,5 @@ struct Window(Movable):
     fn hint_string(hint: ContextHint, mut value: String):
         _ = _cffi.glfwWindowHintString(hint._value, value.unsafe_cstr_ptr())
 
-    fn get_cocoa_window(self) -> OpaquePointer:
+    fn get_cocoa_window(self) -> OpaquePointer[MutOrigin.external]:
         return _cffi.glfwGetCocoaWindow(self._ptr)

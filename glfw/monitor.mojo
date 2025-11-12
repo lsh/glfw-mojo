@@ -14,19 +14,22 @@ fn get_primary_monitor() -> Monitor:
 
 
 fn set_monitor_callback[callback: MonitorFun]():
-    fn _callback(monitor: UnsafePointer[_cffi.GLFWmonitor], event: Int32):
+    fn _callback(
+        monitor: UnsafePointer[_cffi.GLFWmonitor, MutOrigin.external],
+        event: Int32,
+    ):
         callback(Monitor(unsafe_raw_handle=monitor), MonitorEvent(event))
 
     _ = _cffi.glfwSetMonitorCallback(_callback)
 
 
 struct Monitor(Copyable, Movable):
-    var _ptr: UnsafePointer[_cffi.GLFWmonitor]
+    var _ptr: UnsafePointer[_cffi.GLFWmonitor, MutOrigin.external]
 
     fn __init__(
         out self,
         *,
-        unsafe_raw_handle: UnsafePointer[_cffi.GLFWmonitor],
+        unsafe_raw_handle: UnsafePointer[_cffi.GLFWmonitor, MutOrigin.external],
     ):
         self._ptr = unsafe_raw_handle
 
@@ -63,7 +66,7 @@ struct Monitor(Copyable, Movable):
         Get the physical size of the monitor in millimeters.
 
         Returns:
-            The physical size in order: widthMM, heightMM
+            The physical size in order: widthMM, heightMM.
         """
         var width_mm: Int32 = 0
         var height_mm: Int32 = 0
@@ -90,7 +93,9 @@ struct Monitor(Copyable, Movable):
             self._ptr, ptr.bitcast[NoneType]()
         )
 
-    fn get_user_pointer[T: AnyType](self) -> UnsafePointer[T]:
+    fn get_user_pointer[
+        T: AnyType
+    ](self) -> UnsafePointer[T, MutOrigin.external]:
         return _cffi.glfwGetMonitorUserPointer(self._ptr).bitcast[T]()
 
     fn get_video_mode(self) -> VidMode:

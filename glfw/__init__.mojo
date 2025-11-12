@@ -3,9 +3,9 @@ from .monitor import *
 from .window import *
 import ._cffi
 
-alias Image = _cffi.GLFWimage
-alias VidMode = _cffi.GLFWvidmode
-alias GammaRamp = _cffi.GLFWgammaramp
+comptime Image = _cffi.GLFWimage
+comptime VidMode = _cffi.GLFWvidmode
+comptime GammaRamp = _cffi.GLFWgammaramp
 
 
 fn init() raises:
