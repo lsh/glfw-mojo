@@ -406,30 +406,30 @@ struct Window(Movable):
 
         _ = _cffi.glfwSetScrollCallback(self._ptr, _callback)
 
-    fn set_drop_callback[callback: DropFun](mut self):
-        fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
-            count: Int32,
-            paths: UnsafePointer[
-                UnsafePointer[Int8, ImmutOrigin.external], ImmutOrigin.external
-            ],
-        ):
-            var path_list = List[StaticString]()
-            for i in range(count):
-                path_list.append(StaticString(unsafe_from_utf8_ptr=paths[i]))
-            callback(Window(unsafe_raw_handle=ptr, owning=False), path_list^)
+    # fn set_drop_callback[callback: DropFun](mut self):
+    #     fn _callback(
+    #         ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+    #         count: Int32,
+    #         paths: UnsafePointer[
+    #             UnsafePointer[Int8, ImmutOrigin.external], ImmutOrigin.external
+    #         ],
+    #     ):
+    #         var path_list = List[StaticString]()
+    #         for i in range(count):
+    #             path_list.append(StaticString(unsafe_from_utf8_ptr=paths[i]))
+    #         callback(Window(unsafe_raw_handle=ptr, owning=False), path_list^)
 
-        _ = _cffi.glfwSetDropCallback(self._ptr, _callback)
+    #     _ = _cffi.glfwSetDropCallback(self._ptr, _callback)
 
     fn set_clipboard_string(self, mut string: String):
         _cffi.glfwSetClipboardString(self._ptr, string.unsafe_cstr_ptr())
 
-    fn get_clipboard_string(
-        self,
-    ) -> StaticString:
-        return StaticString(
-            unsafe_from_utf8_ptr=_cffi.glfwGetClipboardString(self._ptr)
-        )
+    # fn get_clipboard_string(
+    #     self,
+    # ) -> StaticString:
+    #     return StaticString(
+    #         unsafe_from_utf8_ptr=_cffi.glfwGetClipboardString(self._ptr)
+    #     )
 
     fn make_context_current(self):
         _cffi.glfwMakeContextCurrent(self._ptr)

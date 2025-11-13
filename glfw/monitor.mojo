@@ -83,10 +83,10 @@ struct Monitor(Copyable, Movable):
         )
         return x_scale, y_scale
 
-    fn get_name(self) -> StaticString:
-        return StaticString(
-            unsafe_from_utf8_ptr=_cffi.glfwGetMonitorName(self._ptr)
-        )
+    # fn get_name(self) -> StaticString:
+    #     return StaticString(
+    #         unsafe_from_utf8_ptr=_cffi.glfwGetMonitorName(self._ptr)
+    #     )
 
     fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[T]):
         _cffi.glfwSetMonitorUserUnsafePointer(
