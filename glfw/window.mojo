@@ -25,7 +25,7 @@ struct Window(Movable):
     ):
         self._ptr = _cffi.glfwCreateWindow(
             width, height, title.unsafe_cstr_ptr(), {}, {}
-        )
+        ).unsafe_ptr()
         self._owning = True
 
     fn __init__(
@@ -37,7 +37,7 @@ struct Window(Movable):
     ):
         self._ptr = _cffi.glfwCreateWindow(
             width, height, title.unsafe_cstr_ptr(), monitor._ptr, {}
-        )
+        ).unsafe_ptr()
         self._owning = True
 
     fn __moveinit__(out self, deinit rhs: Self):
@@ -62,7 +62,7 @@ struct Window(Movable):
     fn set_title(mut self, mut title: String):
         _cffi.glfwSetWindowTitle(self._ptr, title.unsafe_cstr_ptr())
 
-    fn set_icon(mut self, images: Span[Image]):
+    fn set_icon(mut self, images: Span[mut=False, Image]):
         _cffi.glfwSetWindowIcon(self._ptr, len(images), images.unsafe_ptr())
 
     fn get_pos(self) -> Tuple[Int32, Int32]:
@@ -167,7 +167,9 @@ struct Window(Movable):
         _cffi.glfwRequestWindowAttention(self._ptr)
 
     fn get_monitor(self) -> Monitor:
-        return Monitor(unsafe_raw_handle=_cffi.glfwGetWindowMonitor(self._ptr))
+        return Monitor(
+            unsafe_raw_handle=_cffi.glfwGetWindowMonitor(self._ptr).unsafe_ptr()
+        )
 
     fn set_monitor(
         self,
@@ -192,95 +194,114 @@ struct Window(Movable):
             _cffi.GLFW_TRUE if value else _cffi.GLFW_FALSE,
         )
 
-    fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[T]):
+    fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[mut=True, T]):
         _cffi.glfwSetWindowUserPointer(self._ptr, ptr.bitcast[NoneType]())
 
     fn get_user_pointer[
         T: AnyType
     ](self) -> UnsafePointer[T, MutOrigin.external]:
-        return _cffi.glfwGetWindowUserPointer(self._ptr).bitcast[T]()
+        return (
+            _cffi.glfwGetWindowUserPointer(self._ptr).unsafe_ptr().bitcast[T]()
+        )
 
     fn set_pos_callback[callback: WindowPosFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             x: Int32,
             y: Int32,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), x, y)
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False), x, y
+            )
 
         _ = _cffi.glfwSetWindowPosCallback(self._ptr, _callback)
 
     fn set_size_callback[callback: WindowSizeFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             width: Int32,
             height: Int32,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), width, height)
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                width,
+                height,
+            )
 
         _ = _cffi.glfwSetWindowSizeCallback(self._ptr, _callback)
 
     fn set_close_callback[callback: WindowCloseFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external]):
-            callback(Window(unsafe_raw_handle=ptr, owning=False))
+        fn _callback(ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True]):
+            callback(Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False))
 
         _ = _cffi.glfwSetWindowCloseCallback(self._ptr, _callback)
 
     fn set_refresh_callback[callback: WindowRefreshFun](mut self):
-        fn _callback(ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external]):
-            callback(Window(unsafe_raw_handle=ptr, owning=False))
+        fn _callback(ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True]):
+            callback(Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False))
 
         _ = _cffi.glfwSetWindowRefreshCallback(self._ptr, _callback)
 
     fn set_focus_callback[callback: WindowFocusFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             focused: Int32,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), Bool(focused))
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                Bool(focused),
+            )
 
         _ = _cffi.glfwSetWindowFocusCallback(self._ptr, _callback)
 
     fn set_iconify_callback[callback: WindowIconifyFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             iconified: Int32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False), Bool(iconified)
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                Bool(iconified),
             )
 
         _ = _cffi.glfwSetWindowIconifyCallback(self._ptr, _callback)
 
     fn set_maximize_callback[callback: WindowMaximizeFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             maximized: Int32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False), Bool(maximized)
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                Bool(maximized),
             )
 
         _ = _cffi.glfwSetWindowMaximizeCallback(self._ptr, _callback)
 
     fn set_framebuffer_size_callback[callback: FramebufferSizeFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             width: Int32,
             height: Int32,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), width, height)
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                width,
+                height,
+            )
 
         _ = _cffi.glfwSetFramebufferSizeCallback(self._ptr, _callback)
 
     fn set_content_scale_callback[callback: WindowContentScaleFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             xscale: Float32,
             yscale: Float32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False), xscale, yscale
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                xscale,
+                yscale,
             )
 
         _ = _cffi.glfwSetWindowContentScaleCallback(self._ptr, _callback)
@@ -312,19 +333,19 @@ struct Window(Movable):
     fn set_cursor_pos(mut self, xpos: Float64, ypos: Float64):
         _cffi.glfwSetCursorPos(self._ptr, xpos, ypos)
 
-    fn set_cursor(self, cursor: UnsafePointer[_cffi.GLFWcursor]):
+    fn set_cursor(self, cursor: UnsafePointer[mut=True, _cffi.GLFWcursor]):
         _cffi.glfwSetCursor(self._ptr, cursor)
 
     fn set_key_callback[callback: KeyFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             key: Int32,
             scancode: Int32,
             action: Int32,
             mods: Int32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False),
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
                 enums.Key(key),
                 scancode,
                 enums.Action(action),
@@ -335,11 +356,11 @@ struct Window(Movable):
 
     fn set_char_callback[callback: CharFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             codepoint: UInt32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False),
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
                 Codepoint(unsafe_unchecked_codepoint=codepoint),
             )
 
@@ -347,12 +368,12 @@ struct Window(Movable):
 
     fn set_char_mods_callback[callback: CharModsFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             codepoint: UInt32,
             mods: Int32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False),
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
                 Codepoint(unsafe_unchecked_codepoint=codepoint),
                 enums.Mod(mods),
             )
@@ -361,13 +382,13 @@ struct Window(Movable):
 
     fn set_mouse_button_callback[callback: MouseButtonFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             button: Int32,
             action: Int32,
             mods: Int32,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False),
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
                 button,
                 action,
                 mods,
@@ -377,41 +398,50 @@ struct Window(Movable):
 
     fn set_cursor_pos_callback[callback: CursorPosFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             xpos: Float64,
             ypos: Float64,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), xpos, ypos)
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                xpos,
+                ypos,
+            )
 
         _ = _cffi.glfwSetCursorPosCallback(self._ptr, _callback)
 
     fn set_cursor_enter_callback[callback: CursorEnterFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             entered: Int32,
         ):
-            callback(Window(unsafe_raw_handle=ptr, owning=False), Bool(entered))
+            callback(
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                Bool(entered),
+            )
 
         _ = _cffi.glfwSetCursorEnterCallback(self._ptr, _callback)
 
     fn set_scroll_callback[callback: ScrollFun](mut self):
         fn _callback(
-            ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+            ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
             xoffset: Float64,
             yoffset: Float64,
         ):
             callback(
-                Window(unsafe_raw_handle=ptr, owning=False), xoffset, yoffset
+                Window(unsafe_raw_handle=ptr.unsafe_ptr(), owning=False),
+                xoffset,
+                yoffset,
             )
 
         _ = _cffi.glfwSetScrollCallback(self._ptr, _callback)
 
     # fn set_drop_callback[callback: DropFun](mut self):
     #     fn _callback(
-    #         ptr: UnsafePointer[_cffi.GLFWwindow, MutOrigin.external],
+    #         ptr: _cffi.FFIPointer[_cffi.GLFWwindow, mut=True],
     #         count: Int32,
-    #         paths: UnsafePointer[
-    #             UnsafePointer[Int8, ImmutOrigin.external], ImmutOrigin.external
+    #         paths: _cffi.FFIPointer[
+    #             _cffi.FFIPointer[Int8, mut=False], mut=False
     #         ],
     #     ):
     #         var path_list = List[StaticString]()
@@ -449,5 +479,5 @@ struct Window(Movable):
     fn hint_string(hint: ContextHint, mut value: String):
         _ = _cffi.glfwWindowHintString(hint._value, value.unsafe_cstr_ptr())
 
-    fn get_cocoa_window(self) -> OpaquePointer[MutOrigin.external]:
+    fn get_cocoa_window(self) -> _cffi.FFIPointer[NoneType, mut=True]:
         return _cffi.glfwGetCocoaWindow(self._ptr)

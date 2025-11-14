@@ -1,8 +1,90 @@
 from sys.ffi import external_call
+from os import abort
+
 
 # --------------------------------------------------------------------------
 #  * GLFW API tokens
 # --------------------------------------------------------------------------
+
+
+@register_passable("trivial")
+struct FFIPointer[type: AnyType, /, *, mut: Bool](
+    Defaultable, ImplicitlyBoolable, ImplicitlyCopyable, Movable, Writable
+):
+    var _value: UnsafePointer[type, Origin[mut].external]
+
+    @always_inline
+    fn __init__(out self):
+        """Create a null ffi pointer."""
+        self._value = {}
+
+    @always_inline
+    @implicit
+    fn __init__(
+        out self: FFIPointer[type, mut=True],
+        unsafe_pointer: UnsafePointer[mut=True, type],
+    ):
+        """Create a mutable ffi pointer from a mutable `UnsafePointer`.
+
+        Args:
+            unsafe_pointer: The mutable `UnsafePointer` to convert from.
+        """
+        self._value = unsafe_pointer.unsafe_origin_cast[MutOrigin.external]()
+
+    @always_inline
+    @implicit
+    fn __init__(
+        out self: FFIPointer[type, mut=False],
+        unsafe_pointer: UnsafePointer[type],
+    ):
+        """Create an immutable ffi pointer from an `UnsafePointer`.
+
+        Args:
+            unsafe_pointer: The `UnsafePointer` to convert from.
+        """
+        self._value = unsafe_pointer.as_immutable().unsafe_origin_cast[
+            ImmutOrigin.external
+        ]()
+
+    @doc_private
+    @implicit
+    fn __init__(
+        out self: FFIPointer[type, mut=True],
+        unsafe_pointer: UnsafePointer[mut=False, type],
+    ):
+        constrained[
+            False,
+            (
+                "Invalid conversion from immutable `UnsafePointer` to mutable"
+                " `FFIPointer`"
+            ),
+        ]()
+        self = abort[type_of(self)]()
+
+    @always_inline
+    fn __bool__(self) -> Bool:
+        """Return true if the pointer is non-null.
+
+        Returns:
+            Whether the pointer is null.
+        """
+        return Bool(self._value)
+
+    @no_inline
+    fn write_to(self, mut writer: Some[Writer]):
+        """Formats the pointer to the provided `Writer`.
+
+        Args:
+            writer: The `Writer` to format the pointer to.
+        """
+        self._value.write_to(writer)
+
+    @always_inline
+    fn unsafe_ptr(self) -> UnsafePointer[Self.type, Origin[Self.mut].external]:
+        return self._value.mut_cast[Self.mut]().unsafe_origin_cast[
+            Origin[Self.mut].external
+        ]()
+
 
 comptime GLFW_VERSION_MAJOR = 3
 comptime GLFW_VERSION_MINOR = 4
@@ -345,67 +427,55 @@ comptime GLFWglproc = fn () -> None
 comptime GLFWvkproc = fn () -> None
 
 # Callback function types
-comptime GLFWerrorfun[origin: ImmutOrigin] = fn (
-    Int32, UnsafePointer[Int8, origin]
+comptime GLFWerrorfun = fn (Int32, FFIPointer[Int8, mut=False]) -> None
+comptime GLFWwindowposfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32, Int32
 ) -> None
-comptime GLFWwindowposfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32, Int32
+comptime GLFWwindowsizefun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32, Int32
 ) -> None
-comptime GLFWwindowsizefun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32, Int32
+comptime GLFWwindowclosefun = fn (FFIPointer[GLFWwindow, mut=True]) -> None
+comptime GLFWwindowrefreshfun = fn (FFIPointer[GLFWwindow, mut=True]) -> None
+comptime GLFWwindowfocusfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32
 ) -> None
-comptime GLFWwindowclosefun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin]
+comptime GLFWwindowiconifyfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32
 ) -> None
-comptime GLFWwindowrefreshfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin]
+comptime GLFWwindowmaximizefun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32
 ) -> None
-comptime GLFWwindowfocusfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32
+comptime GLFWframebuffersizefun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32, Int32
 ) -> None
-comptime GLFWwindowiconifyfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32
+comptime GLFWwindowcontentscalefun = fn (
+    FFIPointer[GLFWwindow, mut=True], Float32, Float32
 ) -> None
-comptime GLFWwindowmaximizefun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32
+comptime GLFWmousebuttonfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32, Int32, Int32
 ) -> None
-comptime GLFWframebuffersizefun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32, Int32
+comptime GLFWcursorposfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Float64, Float64
 ) -> None
-comptime GLFWwindowcontentscalefun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Float32, Float32
+comptime GLFWcursorenterfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32
 ) -> None
-comptime GLFWmousebuttonfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32, Int32, Int32
+comptime GLFWscrollfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Float64, Float64
 ) -> None
-comptime GLFWcursorposfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Float64, Float64
+comptime GLFWkeyfun = fn (
+    FFIPointer[GLFWwindow, mut=True], Int32, Int32, Int32, Int32
 ) -> None
-comptime GLFWcursorenterfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32
+comptime GLFWcharfun = fn (FFIPointer[GLFWwindow, mut=True], UInt32) -> None
+comptime GLFWcharmodsfun = fn (
+    FFIPointer[GLFWwindow, mut=True], UInt32, Int32
 ) -> None
-comptime GLFWscrollfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Float64, Float64
-) -> None
-comptime GLFWkeyfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], Int32, Int32, Int32, Int32
-) -> None
-comptime GLFWcharfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], UInt32
-) -> None
-comptime GLFWcharmodsfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin], UInt32, Int32
-) -> None
-comptime GLFWdropfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWwindow, origin],
+comptime GLFWdropfun = fn (
+    FFIPointer[GLFWwindow, mut=True],
     Int32,
-    UnsafePointer[
-        UnsafePointer[Int8, ImmutOrigin.external], ImmutOrigin.external
-    ],
+    FFIPointer[FFIPointer[Int8, mut=False], mut=False],
 ) -> None
-comptime GLFWmonitorfun[origin: MutOrigin] = fn (
-    UnsafePointer[GLFWmonitor, origin], Int32
-) -> None
+comptime GLFWmonitorfun = fn (FFIPointer[GLFWmonitor, mut=True], Int32) -> None
 comptime GLFWjoystickfun = fn (Int32, Int32) -> None
 
 
@@ -437,9 +507,9 @@ struct GLFWvidmode(Copyable, ImplicitlyCopyable, Movable, Writable):
 
 
 struct GLFWgammaramp(Copyable, ImplicitlyCopyable, Movable, Writable):
-    var red: UnsafePointer[UInt16, MutOrigin.external]
-    var green: UnsafePointer[UInt16, MutOrigin.external]
-    var blue: UnsafePointer[UInt16, MutOrigin.external]
+    var red: FFIPointer[UInt16, mut=True]
+    var green: FFIPointer[UInt16, mut=True]
+    var blue: FFIPointer[UInt16, mut=True]
     var size: UInt32
 
     fn write_to(self, mut w: Some[Writer]):
@@ -460,7 +530,7 @@ struct GLFWgammaramp(Copyable, ImplicitlyCopyable, Movable, Writable):
 struct GLFWimage(Copyable, ImplicitlyCopyable, Movable, Writable):
     var width: Int32
     var height: Int32
-    var pixels: UnsafePointer[Int8, MutOrigin.external]
+    var pixels: FFIPointer[Int8, mut=True]
 
     fn write_to(self, mut w: Some[Writer]):
         w.write(
@@ -521,68 +591,60 @@ fn glfwInitHint(hint: Int32, value: Int32):
 
 
 fn glfwGetVersion(
-    major: UnsafePointer[Int32],
-    minor: UnsafePointer[Int32],
-    rev: UnsafePointer[Int32],
+    major: FFIPointer[Int32, mut=True],
+    minor: FFIPointer[Int32, mut=True],
+    rev: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetVersion", NoneType](major, minor, rev)
 
 
-fn glfwGetVersionString() -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetVersionString", UnsafePointer[Int8, ImmutOrigin.external]
-    ]()
+fn glfwGetVersionString() -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetVersionString", FFIPointer[Int8, mut=False]]()
 
 
 fn glfwGetError[
     string_origin: ImmutOrigin
-](
-    description: UnsafePointer[mut=False, UnsafePointer[Int8, string_origin]]
-) -> Int32:
+](description: FFIPointer[FFIPointer[Int8, mut=False], mut=False]) -> Int32:
     return external_call["glfwGetError", Int32](description)
 
 
 fn glfwSetErrorCallback[
     # CallbackType: GLFWerrorfun
-](callback: GLFWerrorfun) -> OpaquePointer[MutOrigin.external]:
+](callback: GLFWerrorfun) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetErrorCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetErrorCallback", FFIPointer[NoneType, mut=True]
     ](callback)
 
 
 fn glfwGetMonitors(
-    count: UnsafePointer[Int32],
-) -> UnsafePointer[
-    UnsafePointer[GLFWmonitor, MutOrigin.external], MutOrigin.external
-]:
+    count: FFIPointer[Int32, mut=True],
+) -> FFIPointer[FFIPointer[GLFWmonitor, mut=True], mut=True]:
     return external_call[
         "glfwGetMonitors",
-        UnsafePointer[
-            UnsafePointer[GLFWmonitor, MutOrigin.external], MutOrigin.external
-        ],
+        FFIPointer[FFIPointer[GLFWmonitor, mut=True], mut=True],
     ](count)
 
 
-fn glfwGetPrimaryMonitor() -> UnsafePointer[GLFWmonitor, MutOrigin.external]:
+fn glfwGetPrimaryMonitor() -> FFIPointer[GLFWmonitor, mut=True]:
     return external_call[
-        "glfwGetPrimaryMonitor", UnsafePointer[GLFWmonitor, MutOrigin.external]
+        "glfwGetPrimaryMonitor", FFIPointer[GLFWmonitor, mut=True]
     ]()
 
 
 fn glfwGetMonitorPos(
-    monitor: UnsafePointer[GLFWmonitor],
-    xpos: UnsafePointer[Int32],
-    ypos: UnsafePointer[Int32],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    xpos: FFIPointer[Int32, mut=True],
+    ypos: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetMonitorPos", NoneType](monitor, xpos, ypos)
 
 
 fn glfwGetMonitorWorkarea(
-    monitor: UnsafePointer[GLFWmonitor],
-    xpos: UnsafePointer[Int32],
-    ypos: UnsafePointer[Int32],
-    width: UnsafePointer[Int32],
-    height: UnsafePointer[Int32],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    xpos: FFIPointer[Int32, mut=True],
+    ypos: FFIPointer[Int32, mut=True],
+    width: FFIPointer[Int32, mut=True],
+    height: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetMonitorWorkarea", NoneType](
         monitor, xpos, ypos, width, height
@@ -590,9 +652,9 @@ fn glfwGetMonitorWorkarea(
 
 
 fn glfwGetMonitorPhysicalSize(
-    monitor: UnsafePointer[GLFWmonitor],
-    widthMM: UnsafePointer[Int32],
-    heightMM: UnsafePointer[Int32],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    widthMM: FFIPointer[Int32, mut=True],
+    heightMM: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetMonitorPhysicalSize", NoneType](
         monitor, widthMM, heightMM
@@ -600,9 +662,9 @@ fn glfwGetMonitorPhysicalSize(
 
 
 fn glfwGetMonitorContentScale(
-    monitor: UnsafePointer[GLFWmonitor],
-    xscale: UnsafePointer[Float32],
-    yscale: UnsafePointer[Float32],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    xscale: FFIPointer[Float32, mut=True],
+    yscale: FFIPointer[Float32, mut=True],
 ):
     _ = external_call["glfwGetMonitorContentScale", NoneType](
         monitor, xscale, yscale
@@ -610,67 +672,70 @@ fn glfwGetMonitorContentScale(
 
 
 fn glfwGetMonitorName(
-    monitor: UnsafePointer[GLFWmonitor],
-) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetMonitorName", UnsafePointer[Int8, ImmutOrigin.external]
-    ](monitor)
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetMonitorName", FFIPointer[Int8, mut=False]](
+        monitor
+    )
 
 
-fn glfwSetMonitorUserUnsafePointer(
-    monitor: UnsafePointer[GLFWmonitor], UnsafePointer: UnsafePointer[NoneType]
+fn glfwSetMonitorUserPointer(
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    user_pointer: FFIPointer[NoneType, mut=True],
 ):
-    _ = external_call["glfwSetMonitorUserUnsafePointer", NoneType](
-        monitor, UnsafePointer
+    _ = external_call["glfwSetMonitorUserPointer", NoneType](
+        monitor, user_pointer
     )
 
 
 fn glfwGetMonitorUserPointer(
-    monitor: UnsafePointer[GLFWmonitor],
-) -> UnsafePointer[NoneType, MutOrigin.external]:
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwGetMonitorUserPointer", UnsafePointer[NoneType, MutOrigin.external]
+        "glfwGetMonitorUserPointer", FFIPointer[NoneType, mut=True]
     ](monitor)
 
 
 fn glfwSetMonitorCallback[
     # CallbackType: GLFWmonitorfun
-](callback: GLFWmonitorfun) -> OpaquePointer[MutOrigin.external]:
+](callback: GLFWmonitorfun) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetMonitorCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetMonitorCallback", FFIPointer[NoneType, mut=True]
     ](callback)
 
 
 fn glfwGetVideoModes(
-    monitor: UnsafePointer[GLFWmonitor], count: UnsafePointer[Int32]
-) -> UnsafePointer[GLFWvidmode, ImmutOrigin.external]:
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    count: FFIPointer[Int32, mut=True],
+) -> FFIPointer[GLFWvidmode, mut=False]:
     return external_call[
-        "glfwGetVideoModes", UnsafePointer[GLFWvidmode, ImmutOrigin.external]
+        "glfwGetVideoModes", FFIPointer[GLFWvidmode, mut=False]
     ](monitor, count)
 
 
 fn glfwGetVideoMode(
-    monitor: UnsafePointer[GLFWmonitor],
-) -> UnsafePointer[GLFWvidmode, ImmutOrigin.external]:
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+) -> FFIPointer[GLFWvidmode, mut=False]:
     return external_call[
-        "glfwGetVideoMode", UnsafePointer[GLFWvidmode, ImmutOrigin.external]
+        "glfwGetVideoMode", FFIPointer[GLFWvidmode, mut=False]
     ](monitor)
 
 
-fn glfwSetGamma(monitor: UnsafePointer[GLFWmonitor], gamma: Float32):
+fn glfwSetGamma(monitor: FFIPointer[GLFWmonitor, mut=True], gamma: Float32):
     _ = external_call["glfwSetGamma", NoneType](monitor, gamma)
 
 
 fn glfwGetGammaRamp(
-    monitor: UnsafePointer[GLFWmonitor],
-) -> UnsafePointer[GLFWgammaramp, ImmutOrigin.external]:
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+) -> FFIPointer[GLFWgammaramp, mut=False]:
     return external_call[
-        "glfwGetGammaRamp", UnsafePointer[GLFWgammaramp, ImmutOrigin.external]
+        "glfwGetGammaRamp", FFIPointer[GLFWgammaramp, mut=False]
     ](monitor)
 
 
 fn glfwSetGammaRamp(
-    monitor: UnsafePointer[GLFWmonitor], ramp: UnsafePointer[GLFWgammaramp]
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    ramp: FFIPointer[GLFWgammaramp, mut=True],
 ):
     _ = external_call["glfwSetGammaRamp", NoneType](monitor, ramp)
 
@@ -683,72 +748,74 @@ fn glfwWindowHint(hint: Int32, value: Int32):
     _ = external_call["glfwWindowHint", NoneType](hint, value)
 
 
-fn glfwWindowHintString(hint: Int32, value: UnsafePointer[Int8]):
+fn glfwWindowHintString(hint: Int32, value: FFIPointer[Int8, mut=True]):
     _ = external_call["glfwWindowHintString", NoneType](hint, value)
 
 
 fn glfwCreateWindow(
     width: Int32,
     height: Int32,
-    title: UnsafePointer[mut=False, Int8],
-    monitor: UnsafePointer[GLFWmonitor, MutOrigin.external],
-    share: UnsafePointer[GLFWwindow, MutOrigin.external],
-) -> UnsafePointer[GLFWwindow, MutOrigin.external]:
-    return external_call[
-        "glfwCreateWindow", UnsafePointer[GLFWwindow, MutOrigin.external]
-    ](width, height, title, monitor, share)
+    title: FFIPointer[Int8, mut=False],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
+    share: FFIPointer[GLFWwindow, mut=True],
+) -> FFIPointer[GLFWwindow, mut=True]:
+    return external_call["glfwCreateWindow", FFIPointer[GLFWwindow, mut=True]](
+        width, height, title, monitor, share
+    )
 
 
-fn glfwDestroyWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwDestroyWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwDestroyWindow", NoneType](window)
 
 
-fn glfwWindowShouldClose(window: UnsafePointer[GLFWwindow]) -> Int32:
+fn glfwWindowShouldClose(window: FFIPointer[GLFWwindow, mut=True]) -> Int32:
     return external_call["glfwWindowShouldClose", Int32](window)
 
 
-fn glfwSetWindowShouldClose(window: UnsafePointer[GLFWwindow], value: Int32):
+fn glfwSetWindowShouldClose(
+    window: FFIPointer[GLFWwindow, mut=True], value: Int32
+):
     _ = external_call["glfwSetWindowShouldClose", NoneType](window, value)
 
 
 fn glfwSetWindowTitle(
-    window: UnsafePointer[GLFWwindow], title: UnsafePointer[Int8]
+    window: FFIPointer[GLFWwindow, mut=True], title: FFIPointer[Int8, mut=True]
 ):
     _ = external_call["glfwSetWindowTitle", NoneType](window, title)
 
 
 fn glfwSetWindowIcon(
-    window: UnsafePointer[GLFWwindow],
+    window: FFIPointer[GLFWwindow, mut=True],
     count: Int32,
-    images: UnsafePointer[GLFWimage],
+    images: FFIPointer[GLFWimage, mut=True],
 ):
     _ = external_call["glfwSetWindowIcon", NoneType](window, count, images)
 
 
 fn glfwGetWindowPos(
-    window: UnsafePointer[GLFWwindow],
-    xpos: UnsafePointer[Int32],
-    ypos: UnsafePointer[Int32],
+    window: FFIPointer[GLFWwindow, mut=True],
+    xpos: FFIPointer[Int32, mut=True],
+    ypos: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetWindowPos", NoneType](window, xpos, ypos)
 
 
 fn glfwSetWindowPos(
-    window: UnsafePointer[GLFWwindow], xpos: Int32, ypos: Int32
+    window: FFIPointer[GLFWwindow, mut=True], xpos: Int32, ypos: Int32
 ):
     _ = external_call["glfwSetWindowPos", NoneType](window, xpos, ypos)
 
 
 fn glfwGetWindowSize(
-    window: UnsafePointer[GLFWwindow],
-    width: UnsafePointer[Int32],
-    height: UnsafePointer[Int32],
+    window: FFIPointer[GLFWwindow, mut=True],
+    width: FFIPointer[Int32, mut=True],
+    height: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetWindowSize", NoneType](window, width, height)
 
 
 fn glfwSetWindowSizeLimits(
-    window: UnsafePointer[GLFWwindow],
+    window: FFIPointer[GLFWwindow, mut=True],
     minwidth: Int32,
     minheight: Int32,
     maxwidth: Int32,
@@ -760,7 +827,7 @@ fn glfwSetWindowSizeLimits(
 
 
 fn glfwSetWindowAspectRatio(
-    window: UnsafePointer[GLFWwindow], numer: Int32, denom: Int32
+    window: FFIPointer[GLFWwindow, mut=True], numer: Int32, denom: Int32
 ):
     _ = external_call["glfwSetWindowAspectRatio", NoneType](
         window, numer, denom
@@ -768,25 +835,25 @@ fn glfwSetWindowAspectRatio(
 
 
 fn glfwSetWindowSize(
-    window: UnsafePointer[GLFWwindow], width: Int32, height: Int32
+    window: FFIPointer[GLFWwindow, mut=True], width: Int32, height: Int32
 ):
     _ = external_call["glfwSetWindowSize", NoneType](window, width, height)
 
 
 fn glfwGetFramebufferSize(
-    window: UnsafePointer[GLFWwindow],
-    width: UnsafePointer[Int32],
-    height: UnsafePointer[Int32],
+    window: FFIPointer[GLFWwindow, mut=True],
+    width: FFIPointer[Int32, mut=True],
+    height: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetFramebufferSize", NoneType](window, width, height)
 
 
 fn glfwGetWindowFrameSize(
-    window: UnsafePointer[GLFWwindow],
-    left: UnsafePointer[Int32],
-    top: UnsafePointer[Int32],
-    right: UnsafePointer[Int32],
-    bottom: UnsafePointer[Int32],
+    window: FFIPointer[GLFWwindow, mut=True],
+    left: FFIPointer[Int32, mut=True],
+    top: FFIPointer[Int32, mut=True],
+    right: FFIPointer[Int32, mut=True],
+    bottom: FFIPointer[Int32, mut=True],
 ):
     _ = external_call["glfwGetWindowFrameSize", NoneType](
         window, left, top, right, bottom
@@ -794,62 +861,64 @@ fn glfwGetWindowFrameSize(
 
 
 fn glfwGetWindowContentScale(
-    window: UnsafePointer[GLFWwindow],
-    xscale: UnsafePointer[Float32],
-    yscale: UnsafePointer[Float32],
+    window: FFIPointer[GLFWwindow, mut=True],
+    xscale: FFIPointer[Float32, mut=True],
+    yscale: FFIPointer[Float32, mut=True],
 ):
     _ = external_call["glfwGetWindowContentScale", NoneType](
         window, xscale, yscale
     )
 
 
-fn glfwGetWindowOpacity(window: UnsafePointer[GLFWwindow]) -> Float32:
+fn glfwGetWindowOpacity(window: FFIPointer[GLFWwindow, mut=True]) -> Float32:
     return external_call["glfwGetWindowOpacity", Float32](window)
 
 
-fn glfwSetWindowOpacity(window: UnsafePointer[GLFWwindow], opacity: Float32):
+fn glfwSetWindowOpacity(
+    window: FFIPointer[GLFWwindow, mut=True], opacity: Float32
+):
     _ = external_call["glfwSetWindowOpacity", NoneType](window, opacity)
 
 
-fn glfwIconifyWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwIconifyWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwIconifyWindow", NoneType](window)
 
 
-fn glfwRestoreWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwRestoreWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwRestoreWindow", NoneType](window)
 
 
-fn glfwMaximizeWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwMaximizeWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwMaximizeWindow", NoneType](window)
 
 
-fn glfwShowWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwShowWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwShowWindow", NoneType](window)
 
 
-fn glfwHideWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwHideWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwHideWindow", NoneType](window)
 
 
-fn glfwFocusWindow(window: UnsafePointer[GLFWwindow]):
+fn glfwFocusWindow(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwFocusWindow", NoneType](window)
 
 
-fn glfwRequestWindowAttention(window: UnsafePointer[GLFWwindow]):
+fn glfwRequestWindowAttention(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwRequestWindowAttention", NoneType](window)
 
 
 fn glfwGetWindowMonitor(
-    window: UnsafePointer[GLFWwindow],
-) -> UnsafePointer[GLFWmonitor, MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True],
+) -> FFIPointer[GLFWmonitor, mut=True]:
     return external_call[
-        "glfwGetWindowMonitor", UnsafePointer[GLFWmonitor, MutOrigin.external]
+        "glfwGetWindowMonitor", FFIPointer[GLFWmonitor, mut=True]
     ](window)
 
 
 fn glfwSetWindowMonitor(
-    window: UnsafePointer[GLFWwindow],
-    monitor: UnsafePointer[GLFWmonitor],
+    window: FFIPointer[GLFWwindow, mut=True],
+    monitor: FFIPointer[GLFWmonitor, mut=True],
     xpos: Int32,
     ypos: Int32,
     width: Int32,
@@ -862,120 +931,122 @@ fn glfwSetWindowMonitor(
 
 
 fn glfwGetWindowAttrib(
-    window: UnsafePointer[GLFWwindow], attrib: Int32
+    window: FFIPointer[GLFWwindow, mut=True], attrib: Int32
 ) -> Int32:
     return external_call["glfwGetWindowAttrib", Int32](window, attrib)
 
 
 fn glfwSetWindowAttrib(
-    window: UnsafePointer[GLFWwindow], attrib: Int32, value: Int32
+    window: FFIPointer[GLFWwindow, mut=True], attrib: Int32, value: Int32
 ):
     _ = external_call["glfwSetWindowAttrib", NoneType](window, attrib, value)
 
 
 fn glfwSetWindowUserPointer(
-    window: UnsafePointer[GLFWwindow], UnsafePointer: UnsafePointer[NoneType]
+    window: FFIPointer[GLFWwindow, mut=True],
+    user_pointer: FFIPointer[NoneType, mut=True],
 ):
     _ = external_call["glfwSetWindowUserPointer", NoneType](
-        window, UnsafePointer
+        window, user_pointer
     )
 
 
 fn glfwGetWindowUserPointer(
-    window: UnsafePointer[GLFWwindow],
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True],
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwGetWindowUserPointer", OpaquePointer[MutOrigin.external]
+        "glfwGetWindowUserPointer", FFIPointer[NoneType, mut=True]
     ](window)
 
 
 fn glfwSetWindowPosCallback[
     # CallbackType: GLFWwindowposfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowposfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowposfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowPosCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowPosCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowSizeCallback[
     # CallbackType: GLFWwindowsizefun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowsizefun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowsizefun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowSizeCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowSizeCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowCloseCallback[
     # CallbackType: GLFWwindowclosefun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowclosefun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowclosefun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowCloseCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowCloseCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowRefreshCallback[
     # CallbackType: GLFWwindowrefreshfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowrefreshfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowrefreshfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowRefreshCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowRefreshCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowFocusCallback[
     # CallbackType: GLFWwindowfocusfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowfocusfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowfocusfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowFocusCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowFocusCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowIconifyCallback[
     # CallbackType: GLFWwindowiconifyfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowiconifyfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowiconifyfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowIconifyCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowIconifyCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowMaximizeCallback[
     # CallbackType: GLFWwindowmaximizefun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowmaximizefun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWwindowmaximizefun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowMaximizeCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowMaximizeCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetFramebufferSizeCallback[
     # CallbackType: GLFWframebuffersizefun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWframebuffersizefun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWframebuffersizefun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetFramebufferSizeCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetFramebufferSizeCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetWindowContentScaleCallback[
     # CallbackType: GLFWwindowcontentscalefun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWwindowcontentscalefun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True],
+    callback: GLFWwindowcontentscalefun,
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetWindowContentScaleCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetWindowContentScaleCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
@@ -995,12 +1066,14 @@ fn glfwPostEmptyEvent():
     _ = external_call["glfwPostEmptyEvent", NoneType]()
 
 
-fn glfwGetInputMode(window: UnsafePointer[GLFWwindow], mode: Int32) -> Int32:
+fn glfwGetInputMode(
+    window: FFIPointer[GLFWwindow, mut=True], mode: Int32
+) -> Int32:
     return external_call["glfwGetInputMode", Int32](window, mode)
 
 
 fn glfwSetInputMode(
-    window: UnsafePointer[GLFWwindow], mode: Int32, value: Int32
+    window: FFIPointer[GLFWwindow, mut=True], mode: Int32, value: Int32
 ):
     _ = external_call["glfwSetInputMode", NoneType](window, mode, value)
 
@@ -1009,148 +1082,147 @@ fn glfwRawMouseMotionSupported() -> Int32:
     return external_call["glfwRawMouseMotionSupported", Int32]()
 
 
-fn glfwGetKeyName(
-    key: Int32, scancode: Int32
-) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetKeyName", UnsafePointer[Int8, ImmutOrigin.external]
-    ](key, scancode)
+fn glfwGetKeyName(key: Int32, scancode: Int32) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetKeyName", FFIPointer[Int8, mut=False]](
+        key, scancode
+    )
 
 
 fn glfwGetKeyScancode(key: Int32) -> Int32:
     return external_call["glfwGetKeyScancode", Int32](key)
 
 
-fn glfwGetKey(window: UnsafePointer[GLFWwindow], key: Int32) -> Int32:
+fn glfwGetKey(window: FFIPointer[GLFWwindow, mut=True], key: Int32) -> Int32:
     return external_call["glfwGetKey", Int32](window, key)
 
 
 fn glfwGetMouseButton(
-    window: UnsafePointer[GLFWwindow], button: Int32
+    window: FFIPointer[GLFWwindow, mut=True], button: Int32
 ) -> Int32:
     return external_call["glfwGetMouseButton", Int32](window, button)
 
 
 fn glfwGetCursorPos(
-    window: UnsafePointer[GLFWwindow],
-    xpos: UnsafePointer[Float64],
-    ypos: UnsafePointer[Float64],
+    window: FFIPointer[GLFWwindow, mut=True],
+    xpos: FFIPointer[Float64, mut=True],
+    ypos: FFIPointer[Float64, mut=True],
 ):
     _ = external_call["glfwGetCursorPos", NoneType](window, xpos, ypos)
 
 
 fn glfwSetCursorPos(
-    window: UnsafePointer[GLFWwindow], xpos: Float64, ypos: Float64
+    window: FFIPointer[GLFWwindow, mut=True], xpos: Float64, ypos: Float64
 ):
     _ = external_call["glfwSetCursorPos", NoneType](window, xpos, ypos)
 
 
 fn glfwCreateCursor(
-    image: UnsafePointer[GLFWimage], xhot: Int32, yhot: Int32
-) -> UnsafePointer[GLFWcursor, MutOrigin.external]:
-    return external_call[
-        "glfwCreateCursor", UnsafePointer[GLFWcursor, MutOrigin.external]
-    ](image, xhot, yhot)
+    image: FFIPointer[GLFWimage, mut=True], xhot: Int32, yhot: Int32
+) -> FFIPointer[GLFWcursor, mut=True]:
+    return external_call["glfwCreateCursor", FFIPointer[GLFWcursor, mut=True]](
+        image, xhot, yhot
+    )
 
 
 fn glfwCreateStandardCursor(
     shape: Int32,
-) -> UnsafePointer[GLFWcursor, MutOrigin.external]:
+) -> FFIPointer[GLFWcursor, mut=True]:
     return external_call[
         "glfwCreateStandardCursor",
-        UnsafePointer[GLFWcursor, MutOrigin.external],
+        FFIPointer[GLFWcursor, mut=True],
     ](shape)
 
 
-fn glfwDestroyCursor(cursor: UnsafePointer[GLFWcursor]):
+fn glfwDestroyCursor(cursor: FFIPointer[GLFWcursor, mut=True]):
     _ = external_call["glfwDestroyCursor", NoneType](cursor)
 
 
 fn glfwSetCursor(
-    window: UnsafePointer[GLFWwindow], cursor: UnsafePointer[GLFWcursor]
+    window: FFIPointer[GLFWwindow, mut=True],
+    cursor: FFIPointer[GLFWcursor, mut=True],
 ):
     _ = external_call["glfwSetCursor", NoneType](window, cursor)
 
 
 fn glfwSetKeyCallback[
     # CallbackType: GLFWkeyfun
-](window: UnsafePointer[GLFWwindow], callback: GLFWkeyfun) -> OpaquePointer[
-    MutOrigin.external
+](window: FFIPointer[GLFWwindow, mut=True], callback: GLFWkeyfun) -> FFIPointer[
+    NoneType, mut=True
 ]:
-    return external_call[
-        "glfwSetKeyCallback", OpaquePointer[MutOrigin.external]
-    ](window, callback)
+    return external_call["glfwSetKeyCallback", FFIPointer[NoneType, mut=True]](
+        window, callback
+    )
 
 
 fn glfwSetCharCallback[
     # CallbackType: GLFWcharfun
-](window: UnsafePointer[GLFWwindow], callback: GLFWcharfun) -> OpaquePointer[
-    MutOrigin.external
-]:
-    return external_call[
-        "glfwSetCharCallback", OpaquePointer[MutOrigin.external]
-    ](window, callback)
+](
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWcharfun
+) -> FFIPointer[NoneType, mut=True]:
+    return external_call["glfwSetCharCallback", FFIPointer[NoneType, mut=True]](
+        window, callback
+    )
 
 
 fn glfwSetCharModsCallback[
     # CallbackType: GLFWcharmodsfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWcharmodsfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWcharmodsfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetCharModsCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetCharModsCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetMouseButtonCallback[
     # CallbackType: GLFWmousebuttonfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWmousebuttonfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWmousebuttonfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetMouseButtonCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetMouseButtonCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetCursorPosCallback[
     # CallbackType: GLFWcursorposfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWcursorposfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWcursorposfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetCursorPosCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetCursorPosCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetCursorEnterCallback[
     # CallbackType: GLFWcursorenterfun
 ](
-    window: UnsafePointer[GLFWwindow], callback: GLFWcursorenterfun
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWcursorenterfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetCursorEnterCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetCursorEnterCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetScrollCallback[
     # CallbackType: GLFWscrollfun
-](window: UnsafePointer[GLFWwindow], callback: GLFWscrollfun) -> OpaquePointer[
-    MutOrigin.external
-]:
+](
+    window: FFIPointer[GLFWwindow, mut=True], callback: GLFWscrollfun
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetScrollCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetScrollCallback", FFIPointer[NoneType, mut=True]
     ](window, callback)
 
 
 fn glfwSetDropCallback[
     # CallbackType: GLFWdropfun
 ](
-    window: UnsafePointer[GLFWwindow],
-    callback: GLFWdropfun[MutOrigin.external],
-) -> OpaquePointer[MutOrigin.external]:
-    return external_call[
-        "glfwSetDropCallback", OpaquePointer[MutOrigin.external]
-    ](window, callback)
+    window: FFIPointer[GLFWwindow, mut=True],
+    callback: GLFWdropfun,
+) -> FFIPointer[NoneType, mut=True]:
+    return external_call["glfwSetDropCallback", FFIPointer[NoneType, mut=True]](
+        window, callback
+    )
 
 
 fn glfwJoystickPresent(jid: Int32) -> Int32:
@@ -1158,52 +1230,50 @@ fn glfwJoystickPresent(jid: Int32) -> Int32:
 
 
 fn glfwGetJoystickAxes(
-    jid: Int32, count: UnsafePointer[Int32]
-) -> UnsafePointer[Float32, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetJoystickAxes", UnsafePointer[Float32, ImmutOrigin.external]
-    ](jid, count)
-
-
-fn glfwGetJoystickButtons(
-    jid: Int32, count: UnsafePointer[Int32]
-) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetJoystickButtons", UnsafePointer[Int8, ImmutOrigin.external]
-    ](jid, count)
-
-
-fn glfwGetJoystickHats(
-    jid: Int32, count: UnsafePointer[Int32]
-) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetJoystickHats", UnsafePointer[Int8, ImmutOrigin.external]
-    ](jid, count)
-
-
-fn glfwGetJoystickName(jid: Int32) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetJoystickName", UnsafePointer[Int8, ImmutOrigin.external]
-    ](jid)
-
-
-fn glfwGetJoystickGUID(jid: Int32) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetJoystickGUID", UnsafePointer[Int8, ImmutOrigin.external]
-    ](jid)
-
-
-fn glfwSetJoystickUserUnsafePointer(
-    jid: Int32, UnsafePointer: UnsafePointer[NoneType]
-):
-    _ = external_call["glfwSetJoystickUserUnsafePointer", NoneType](
-        jid, UnsafePointer
+    jid: Int32, count: FFIPointer[Int32, mut=True]
+) -> FFIPointer[Float32, mut=False]:
+    return external_call["glfwGetJoystickAxes", FFIPointer[Float32, mut=False]](
+        jid, count
     )
 
 
-fn glfwGetJoystickUserPointer(jid: Int32) -> OpaquePointer[MutOrigin.external]:
+fn glfwGetJoystickButtons(
+    jid: Int32, count: FFIPointer[Int32, mut=True]
+) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetJoystickButtons", FFIPointer[Int8, mut=False]](
+        jid, count
+    )
+
+
+fn glfwGetJoystickHats(
+    jid: Int32, count: FFIPointer[Int32, mut=True]
+) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetJoystickHats", FFIPointer[Int8, mut=False]](
+        jid, count
+    )
+
+
+fn glfwGetJoystickName(jid: Int32) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetJoystickName", FFIPointer[Int8, mut=False]](
+        jid
+    )
+
+
+fn glfwGetJoystickGUID(jid: Int32) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetJoystickGUID", FFIPointer[Int8, mut=False]](
+        jid
+    )
+
+
+fn glfwSetJoystickUserPointer(
+    jid: Int32, user_pointer: FFIPointer[NoneType, mut=True]
+):
+    _ = external_call["glfwSetJoystickUserPointer", NoneType](jid, user_pointer)
+
+
+fn glfwGetJoystickUserPointer(jid: Int32) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwGetJoystickUserPointer", OpaquePointer[MutOrigin.external]
+        "glfwGetJoystickUserPointer", FFIPointer[NoneType, mut=True]
     ](jid)
 
 
@@ -1213,40 +1283,38 @@ fn glfwJoystickIsGamepad(jid: Int32) -> Int32:
 
 fn glfwSetJoystickCallback[
     # CallbackType: GLFWjoystickfun
-](callback: GLFWjoystickfun) -> OpaquePointer[MutOrigin.external]:
+](callback: GLFWjoystickfun) -> FFIPointer[NoneType, mut=True]:
     return external_call[
-        "glfwSetJoystickCallback", OpaquePointer[MutOrigin.external]
+        "glfwSetJoystickCallback", FFIPointer[NoneType, mut=True]
     ](callback)
 
 
-fn glfwUpdateGamepadMappings(string: UnsafePointer[Int8]) -> Int32:
+fn glfwUpdateGamepadMappings(string: FFIPointer[Int8, mut=True]) -> Int32:
     return external_call["glfwUpdateGamepadMappings", Int32](string)
 
 
-fn glfwGetGamepadName(jid: Int32) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetGamepadName", UnsafePointer[Int8, ImmutOrigin.external]
-    ](jid)
+fn glfwGetGamepadName(jid: Int32) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetGamepadName", FFIPointer[Int8, mut=False]](jid)
 
 
 fn glfwGetGamepadState(
-    jid: Int32, state: UnsafePointer[GLFWgamepadstate]
+    jid: Int32, state: FFIPointer[GLFWgamepadstate, mut=True]
 ) -> Int32:
     return external_call["glfwGetGamepadState", Int32](jid, state)
 
 
 fn glfwSetClipboardString(
-    window: UnsafePointer[GLFWwindow], string: UnsafePointer[Int8]
+    window: FFIPointer[GLFWwindow, mut=True], string: FFIPointer[Int8, mut=True]
 ):
     _ = external_call["glfwSetClipboardString", NoneType](window, string)
 
 
 fn glfwGetClipboardString(
-    window: UnsafePointer[GLFWwindow],
-) -> UnsafePointer[Int8, ImmutOrigin.external]:
-    return external_call[
-        "glfwGetClipboardString", UnsafePointer[Int8, ImmutOrigin.external]
-    ](window)
+    window: FFIPointer[GLFWwindow, mut=True],
+) -> FFIPointer[Int8, mut=False]:
+    return external_call["glfwGetClipboardString", FFIPointer[Int8, mut=False]](
+        window
+    )
 
 
 fn glfwGetTime() -> Float64:
@@ -1265,17 +1333,17 @@ fn glfwGetTimerFrequency() -> UInt64:
     return external_call["glfwGetTimerFrequency", UInt64]()
 
 
-fn glfwMakeContextCurrent(window: UnsafePointer[GLFWwindow]):
+fn glfwMakeContextCurrent(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwMakeContextCurrent", NoneType](window)
 
 
-fn glfwGetCurrentContext() -> UnsafePointer[GLFWwindow, MutOrigin.external]:
+fn glfwGetCurrentContext() -> FFIPointer[GLFWwindow, mut=True]:
     return external_call[
-        "glfwGetCurrentContext", UnsafePointer[GLFWwindow, MutOrigin.external]
+        "glfwGetCurrentContext", FFIPointer[GLFWwindow, mut=True]
     ]()
 
 
-fn glfwSwapBuffers(window: UnsafePointer[GLFWwindow]):
+fn glfwSwapBuffers(window: FFIPointer[GLFWwindow, mut=True]):
     _ = external_call["glfwSwapBuffers", NoneType](window)
 
 
@@ -1283,11 +1351,11 @@ fn glfwSwapInterval(interval: Int32):
     _ = external_call["glfwSwapInterval", NoneType](interval)
 
 
-fn glfwExtensionSupported(extension: UnsafePointer[Int8]) -> Int32:
+fn glfwExtensionSupported(extension: FFIPointer[Int8, mut=True]) -> Int32:
     return external_call["glfwExtensionSupported", Int32](extension)
 
 
-fn glfwGetProcAddress(procname: UnsafePointer[Int8]) -> GLFWglproc:
+fn glfwGetProcAddress(procname: FFIPointer[Int8, mut=True]) -> GLFWglproc:
     return external_call["glfwGetProcAddress", GLFWglproc](procname)
 
 
@@ -1295,18 +1363,12 @@ fn glfwVulkanSupported() -> Int32:
     return external_call["glfwVulkanSupported", Int32]()
 
 
-fn glfwGetRequiredInstanceExtensions[
-    strings_origin: ImmutOrigin
-](
-    count: UnsafePointer[UInt32],
-) -> UnsafePointer[
-    UnsafePointer[Int8, strings_origin], ImmutOrigin.external
-]:
+fn glfwGetRequiredInstanceExtensions(
+    count: FFIPointer[UInt32, mut=True],
+) -> FFIPointer[FFIPointer[Int8, mut=False], mut=False]:
     return external_call[
         "glfwGetRequiredInstanceExtensions",
-        UnsafePointer[
-            UnsafePointer[Int8, strings_origin], ImmutOrigin.external
-        ],
+        FFIPointer[FFIPointer[Int8, mut=False], mut=False],
     ](count)
 
 
@@ -1314,7 +1376,7 @@ fn glfwGetRequiredInstanceExtensions[
 
 
 fn glfwGetInstanceProcAddress(
-    instance: OpaquePointer, procname: UnsafePointer[Int8]
+    instance: OpaquePointer, procname: FFIPointer[Int8, mut=True]
 ) -> GLFWvkproc:
     return external_call["glfwGetInstanceProcAddress", GLFWvkproc](
         instance, procname
@@ -1331,7 +1393,7 @@ fn glfwGetPhysicalDevicePresentationSupport(
 
 fn glfwCreateWindowSurface(
     instance: OpaquePointer,
-    window: UnsafePointer[GLFWwindow],
+    window: FFIPointer[GLFWwindow, mut=True],
     allocator: OpaquePointer,
     surface: OpaquePointer,
 ) -> Int32:
@@ -1341,10 +1403,10 @@ fn glfwCreateWindowSurface(
 
 
 fn glfwGetCocoaWindow(
-    window: UnsafePointer[GLFWwindow],
-) -> OpaquePointer[MutOrigin.external]:
+    window: FFIPointer[GLFWwindow, mut=True],
+) -> FFIPointer[NoneType, mut=True]:
     return external_call[
         "glfwGetCocoaWindow",
-        OpaquePointer[MutOrigin.external],
-        UnsafePointer[GLFWwindow, window.origin],
+        FFIPointer[NoneType, mut=True],
+        FFIPointer[GLFWwindow, mut=True],
     ](window)
