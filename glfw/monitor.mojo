@@ -1,24 +1,26 @@
 import ._cffi
 
 
-fn get_monitors() -> Span[Monitor, origin_of()]:
+fn get_monitors() -> Span[Monitor, MutOrigin.external]:
     var count = Int32(0)
     var ptr = _cffi.glfwGetMonitors(UnsafePointer(to=count))
-    return Span[Monitor, origin_of()](
-        ptr=ptr.bitcast[Monitor](), length=Int(count)
+    return Span[Monitor, MutOrigin.external](
+        ptr=ptr.unsafe_ptr().bitcast[Monitor](), length=Int(count)
     )
 
 
 fn get_primary_monitor() -> Monitor:
-    return Monitor(unsafe_raw_handle=_cffi.glfwGetPrimaryMonitor())
+    return Monitor(unsafe_raw_handle=_cffi.glfwGetPrimaryMonitor().unsafe_ptr())
 
 
 fn set_monitor_callback[callback: MonitorFun]():
     fn _callback(
-        monitor: UnsafePointer[_cffi.GLFWmonitor, MutOrigin.external],
+        monitor: _cffi.FFIPointer[_cffi.GLFWmonitor, mut=True],
         event: Int32,
     ):
-        callback(Monitor(unsafe_raw_handle=monitor), MonitorEvent(event))
+        callback(
+            Monitor(unsafe_raw_handle=monitor.unsafe_ptr()), MonitorEvent(event)
+        )
 
     _ = _cffi.glfwSetMonitorCallback(_callback)
 
@@ -88,34 +90,38 @@ struct Monitor(Copyable, Movable):
     #         unsafe_from_utf8_ptr=_cffi.glfwGetMonitorName(self._ptr)
     #     )
 
-    fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[T]):
-        _cffi.glfwSetMonitorUserUnsafePointer(
-            self._ptr, ptr.bitcast[NoneType]()
-        )
+    fn set_user_pointer[T: AnyType](mut self, ptr: UnsafePointer[mut=True, T]):
+        _cffi.glfwSetMonitorUserPointer(self._ptr, ptr.bitcast[NoneType]())
 
     fn get_user_pointer[
         T: AnyType
     ](self) -> UnsafePointer[T, MutOrigin.external]:
-        return _cffi.glfwGetMonitorUserPointer(self._ptr).bitcast[T]()
+        return (
+            _cffi.glfwGetMonitorUserPointer(self._ptr).unsafe_ptr().bitcast[T]()
+        )
 
     fn get_video_mode(self) -> VidMode:
         """Get the current video mode of the monitor."""
         var mode_ptr = _cffi.glfwGetVideoMode(self._ptr)
-        return mode_ptr[]
+        return mode_ptr.unsafe_ptr()[]
 
     fn set_gamma(mut self, gamma: Float32):
         _cffi.glfwSetGamma(self._ptr, gamma)
 
     fn get_gamma_ramp(self) -> GammaRamp:
         """Get the gamma ramp for the monitor."""
-        var ramp_ptr = _cffi.glfwGetGammaRamp(self._ptr)
+        var ramp_ptr = _cffi.glfwGetGammaRamp(self._ptr).unsafe_ptr()
         return ramp_ptr[]
 
-    fn set_gamma_ramp(mut self, ramp: UnsafePointer[GammaRamp]):
+    fn set_gamma_ramp(mut self, ramp: UnsafePointer[mut=True, GammaRamp]):
         _cffi.glfwSetGammaRamp(self._ptr, ramp)
 
-    fn get_video_modes(self) -> Span[VidMode, origin_of()]:
+    fn get_video_modes(self) -> Span[VidMode, ImmutOrigin.external]:
         """Get all available video modes for the monitor."""
         var count = Int32(0)
-        var ptr = _cffi.glfwGetVideoModes(self._ptr, UnsafePointer(to=count))
-        return Span[VidMode, origin_of()](ptr=ptr, length=Int(count))
+        var ptr = _cffi.glfwGetVideoModes(
+            self._ptr, _cffi.FFIPointer[mut=True](UnsafePointer(to=count))
+        )
+        return Span[VidMode, ImmutOrigin.external](
+            ptr=ptr.unsafe_ptr(), length=Int(count)
+        )
